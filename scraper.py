@@ -80,7 +80,7 @@ def main():
         data_dir = freader.readline().split()
     letters = set(letters)
     urls = ['https://patient.info/forums/index-%s' % letter for letter in letters]
-    scrape(urls, data_dir)
+    scrape(urls, data_dir[0])
 
 
 if __name__ == '__main__':
