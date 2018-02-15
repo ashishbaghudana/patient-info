@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from typing import List
+from retrying import retry
 
 import requests
 import os
@@ -26,6 +27,7 @@ def scrape(urls: URLs, file_path: str='/Users/ashish/code/patientinfo/data'):
     return request_list
 
 
+@retry(stop_max_attempt_number=3)
 def scrape_forum(link: str, file_path: str, prefix: str='https://patient.info') -> URLs:
     urls = []
     page_id = 0
@@ -33,7 +35,10 @@ def scrape_forum(link: str, file_path: str, prefix: str='https://patient.info') 
     if not os.path.exists(directory) and not os.path.isdir(directory):
         os.mkdir(directory)
     print(f'Scraping page %s%s?page=%d' % (prefix, link, page_id))
-    response = requests.get('%s%s?page=%d' % (prefix, link, page_id))
+    response = requests.get('%s%s' % (prefix, link))
+    if response.url != link:
+        link = response.url
+        prefix = ''
     while response.ok:
         soup = BeautifulSoup(response.text, 'html.parser')
         for href in soup.find_all('a', class_='thread-ctrl'):
@@ -47,6 +52,7 @@ def scrape_forum(link: str, file_path: str, prefix: str='https://patient.info') 
     return urls
 
 
+@retry(stop_max_attempt_number=3)
 def scrape_thread(link: str, directory: str, prefix: str='https://patient.info'):
     print(f'Downloading HTML content for {prefix}{link}')
     if os.path.exists('%s.html' % os.path.join(directory, link.split('/')[-1])):
@@ -69,9 +75,12 @@ def get_forums_in_url(link: str) -> URLs:
 
 
 def main():
-    letters = set('a')
+    with open('forums.cfg') as freader:
+        letters = freader.readline().strip()
+        data_dir = freader.readline().split()
+    letters = set(letters)
     urls = ['https://patient.info/forums/index-%s' % letter for letter in letters]
-    scrape(urls)
+    scrape(urls, data_dir)
 
 
 if __name__ == '__main__':
