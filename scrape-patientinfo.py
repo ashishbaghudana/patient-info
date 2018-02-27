@@ -113,7 +113,7 @@ def _get_discussions(link: str):
 
 
 def get_all_discussions(urls: URLs):
-    pool = ThreadPool(4)
+    pool = ThreadPool(8)
     discussion_list = pool.map(_get_discussions, urls)
     return discussion_list
 
