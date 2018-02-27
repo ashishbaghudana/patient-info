@@ -106,6 +106,8 @@ def _get_discussions(link: str):
             page_id += 1
             print(f'Scraping page %s?page=%d' % (url, page_id))
             response = make_request('%s?page=%d' % (url, page_id), timeout=20)
+    with open(link[-1]+'.txt', 'w') as fwriter:
+        fwriter.write('\n'.join(discussion_list))
     return discussion_list
 
 
