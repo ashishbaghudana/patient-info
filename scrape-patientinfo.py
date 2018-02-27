@@ -53,7 +53,7 @@ def scrape_forum(link: str, file_path: str, prefix: str='https://patient.info') 
     return urls
 
 
-@retry(stop_max_attempt_number=3)
+@retry(stop_max_attempt_number=100, wait_random_min=1000, wait_random_max=2000)
 def scrape_thread(link: str, directory: str, prefix: str='https://patient.info'):
     print(f'Downloading HTML content for {prefix}{link}')
     if os.path.exists('%s.html' % os.path.join(directory, link.split('/')[-1])):
@@ -84,6 +84,11 @@ def num_collections(urls: URLs) -> int:
     return count
 
 
+@retry(stop_max_attempt_number=100, wait_random_min=1000, wait_random_max=2000)
+def make_request(url, **kwargs):
+    return requests.get(url, kwargs)
+
+
 def _get_discussions(link: str):
     discussion_list = []
     print(f'Scraping for link: {link}')
@@ -91,7 +96,7 @@ def _get_discussions(link: str):
     for url in forums:
         page_id = 0
         print(f'Scraping forum {url}')
-        response = requests.get(url)
+        response = make_request(url)
         url = response.url
         while response.ok:
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -100,7 +105,7 @@ def _get_discussions(link: str):
                     discussion_list.append(href.attrs['href'])
             page_id += 1
             print(f'Scraping page %s?page=%d' % (url, page_id))
-            response = requests.get('%s?page=%d' % (url, page_id), timeout=20)
+            response = make_request('%s?page=%d' % (url, page_id), timeout=20)
     return discussion_list
 
 
