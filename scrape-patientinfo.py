@@ -102,12 +102,13 @@ def _get_discussions(link: str):
             soup = BeautifulSoup(response.text, 'html.parser')
             for href in soup.find_all('a', class_='thread-ctrl'):
                 if href.attrs['href'].startswith('/'):
-                    discussion_list.append(href.attrs['href'])
+                    discussion_list.append((url, href.attrs['href']))
             page_id += 1
             print(f'Scraping page %s?page=%d' % (url, page_id))
             response = make_request('%s?page=%d' % (url, page_id), timeout=20)
     with open(link[-1]+'.txt', 'w') as fwriter:
-        fwriter.write('\n'.join(discussion_list))
+        for url, discussion in discussion_list:
+            fwriter.write(url + '\t' + discussion + '\n')
     return discussion_list
 
 
