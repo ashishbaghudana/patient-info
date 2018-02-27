@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from typing import List
 from retrying import retry
+from multiprocessing.dummy import Pool as ThreadPool
 
 import requests
 import os
@@ -9,7 +10,7 @@ import os
 URLs = List[str]
 
 
-def scrape(urls: URLs, file_path: str='/Users/ashish/code/patientinfo/data'):
+def scrape(urls: URLs, file_path: str='/Users/ashish/code/scrape-medical-data/data'):
     request_list = []
     if not os.path.exists(file_path) and not os.path.isdir(file_path):
         os.mkdir(file_path)
@@ -62,7 +63,7 @@ def scrape_thread(link: str, directory: str, prefix: str='https://patient.info')
         fwriter.write(response.text)
 
 
-def get_forums_in_url(link: str) -> URLs:
+def get_forums_in_url(link: str, prefix: str='https://patient.info') -> URLs:
     urls = []
     print(f'Scraping page %s' % link)
     response = requests.get(link)
@@ -70,12 +71,46 @@ def get_forums_in_url(link: str) -> URLs:
     for td in soup.findChildren('td'):
         link = td.findChild('a').attrs['href']
         if link is not None:
-            urls.append(link)
+            urls.append(f'{prefix}{link}')
     return urls
 
 
+def num_collections(urls: URLs) -> int:
+    count = 0
+    for link in urls:
+        print(f'Scraping for link: {link}')
+        links = get_forums_in_url(link)
+        count += len(links)
+    return count
+
+
+def _get_discussions(link: str):
+    discussion_list = []
+    print(f'Scraping for link: {link}')
+    forums = get_forums_in_url(link)
+    for url in forums:
+        page_id = 0
+        print(f'Scraping forum {url}')
+        response = requests.get(url)
+        while response.ok:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for href in soup.find_all('a', class_='thread-ctrl'):
+                if href.attrs['href'].startswith('/'):
+                    discussion_list.append(href.attrs['href'])
+            page_id += 1
+            print(f'Scraping page %s?page=%d' % (url, page_id))
+            response = requests.get('%s?page=%d' % (url, page_id), timeout=20)
+    return discussion_list
+
+
+def get_all_discussions(urls: URLs):
+    pool = ThreadPool(4)
+    discussion_list = pool.map(_get_discussions, urls)
+    return discussion_list
+
+
 def main():
-    with open('forums.cfg') as freader:
+    with open('forums-patientinfo.cfg') as freader:
         letters = freader.readline().strip()
         data_dir = freader.readline().split()
     letters = set(letters)
@@ -83,5 +118,17 @@ def main():
     scrape(urls, data_dir[0])
 
 
+def count():
+    with open('forums-patientinfo.cfg') as freader:
+        letters = freader.readline().strip()
+    letters = set(letters)
+    urls = ['https://patient.info/forums/index-%s' % letter for letter in letters]
+    print(num_collections(urls))
+
+
 if __name__ == '__main__':
-    main()
+    with open('forums-patientinfo.cfg') as freader:
+        letters = freader.readline().strip()
+    letters = set(letters)
+    urls = ['https://patient.info/forums/index-%s' % letter for letter in letters]
+    get_all_discussions(urls)
