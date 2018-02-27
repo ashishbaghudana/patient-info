@@ -92,6 +92,7 @@ def _get_discussions(link: str):
         page_id = 0
         print(f'Scraping forum {url}')
         response = requests.get(url)
+        url = response.url
         while response.ok:
             soup = BeautifulSoup(response.text, 'html.parser')
             for href in soup.find_all('a', class_='thread-ctrl'):
