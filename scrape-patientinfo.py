@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from glob import glob
 from typing import List
 from retrying import retry
 from multiprocessing.dummy import Pool as ThreadPool
@@ -118,6 +119,25 @@ def get_all_discussions(urls: URLs):
     return discussion_list
 
 
+def parse_line_and_download_thread(line):
+    forum = line.strip().split('\t')[0].split('/')[-1]
+    link = '%s%s' % ('https://patient.info', line.strip().split('\t')[1])
+    directory = os.path.join('data', forum)
+    if not os.path.exists(directory) and not os.path.isdir(directory):
+        os.mkdir(directory)
+    download_threads(directory, link)
+
+
+def download_threads(forum: str, link: str):
+    print(f'Downloading HTML content for {link}')
+    page_id = 0
+    if os.path.exists('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id)):
+        return
+    response = requests.get(f'{link}', timeout=10)
+    with open('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id), 'w') as fwriter:
+        fwriter.write(response.text)
+
+
 def main():
     with open('forums-patientinfo.cfg') as freader:
         letters = freader.readline().strip()
@@ -135,9 +155,21 @@ def count():
     print(num_collections(urls))
 
 
-if __name__ == '__main__':
+def download_all_discussions():
     with open('forums-patientinfo.cfg') as freader:
         letters = freader.readline().strip()
     letters = set(letters)
     urls = ['https://patient.info/forums/index-%s' % letter for letter in letters]
     get_all_discussions(urls)
+
+
+def download_all_threads():
+    pool = ThreadPool(8)
+    files = glob('*.txt')
+    for text_file in files:
+        with open(text_file) as freader:
+            pool.map(parse_line_and_download_thread, freader)
+
+
+if __name__ == '__main__':
+    download_all_threads()
