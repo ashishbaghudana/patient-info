@@ -134,13 +134,15 @@ def download_threads(forum: str, link: str):
     if os.path.exists('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id)):
         return
     response = make_request(f'{link}?page={page_id}', timeout=10)
-    with open('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id), 'w') as fwriter:
-        fwriter.write(response.text)
+    if response.ok:
+        with open('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id), 'w') as fwriter:
+            fwriter.write(response.text)
     while response.ok:
         page_id += 1
         response = make_request(f'{link}?page={page_id}', timeout=10)
-        with open('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id), 'w') as fwriter:
-            fwriter.write(response.text)
+        if response.ok:
+            with open('%s-page-%d.html' % (os.path.join(forum, link.split('/')[-1]), page_id), 'w') as fwriter:
+                fwriter.write(response.text)
 
 
 def main():

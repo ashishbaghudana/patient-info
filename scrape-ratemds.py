@@ -23,7 +23,7 @@ def scrape(url: str='https://www.ratemds.com/api/doctor/',
         index += 1
 
 
-@retry(stop_max_attempt_number=3)
+@retry(stop_max_attempt_number=100, wait_random_min=1000, wait_random_max=2000)
 def make_request(url: str) -> requests.Response:
     response = requests.get(url)
     return response
